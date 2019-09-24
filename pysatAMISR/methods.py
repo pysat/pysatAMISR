@@ -7,8 +7,10 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import sys
-import xarray as xr
 import numpy as np
+import xarray as xr
+
+import pysat
 import visuamisr as visr
 
 def amisr_rules():
@@ -47,8 +49,9 @@ def load(fnames, tag=None, sat_id=None,
         Satellite ID used to identify particular data set to be loaded.
         This input is nominally provided by pysat itself.
     xarray_coords : list
-        List of keywords to use as coordinates (default=['ave_times',
-        'beamcodes', 'range_gate', 'uncor_gate'])
+        List of keywords to use as coordinates, with time as the first
+        key in the list (default=['ave_times', 'beamcodes', 'range_gate',
+        'uncor_gate'])
     xarray_attrs : list
         List of keywords to include as attributes (default=['site_latitude',
         'site_longitude', 'site_altitude', 'site_name', 'site_code'])
@@ -57,10 +60,11 @@ def load(fnames, tag=None, sat_id=None,
     -------
     data : xr.DataSet
         An xarray DataSet holding the data from the HDF5 file
-    metadata : pysat.Meta
-        Metadata from the HDF5 file, as well as default values from pysat
+    meta : pysat.Meta
+        Meta data from the HDF5 file, as well as default values from pysat
 
     """
+    time_key = xarray_coords[0]
 
     # Open only the first file, output is a dict
     file_data = visr.analyze.read_data(fnames[0])
@@ -114,19 +118,23 @@ def load(fnames, tag=None, sat_id=None,
                                   'dims': xarray_coords,
                                   'data_vars': data_vars})
 
+    # Rename the time coordinate
+    if time_key != 'time':
+        xdata.rename({time_key: 'time'}, inplace=True)
+
     # Assign the meta data
     meta = pysat.Meta()
     meta.info = {'acknowledgements': amisr_rules()}
     for dkey in data_vars.keys():
         meta[dkey] = get_metadata(dkey)
 
-    for dkey in xarray_coords.keys():
+    for dkey in xarray_coords:
         meta[dkey] = get_metadata(dkey)
 
-    for dkey in xarray_attrs.keys():
+    for dkey in xarray_attrs:
         meta[dkey] = get_metadata(dkey)
 
-    return xdata
+    return xdata, meta
 
 def get_metadata(data_key):
     """ Get metadata for a specified data key
@@ -207,7 +215,7 @@ def get_metadata(data_key):
                  'value_max': np.nan, 'fill': np.nan}
 
     # Assign the particular data
-    if data_key in units.data_key():
+    if data_key in units.keys():
         meta_dict = {'units': units[data_key], 'long_name': long_name[data_key],
                      'desc': long_name[data_key], 'label': long_name[data_key],
                      'scale': scale[data_key]}
