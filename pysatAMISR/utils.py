@@ -20,7 +20,8 @@ def calc_geoloc(inst):
 
     Notes
     -----
-    Adds 'gdlat' and 'gdlon' to the Instrument
+    Adds 'gdlat' and 'gdlon' to the Instrument.  Intended to be added as a
+    set in the custom processing when loading the AMISR data.
 
     """
 
