@@ -19,8 +19,9 @@ tag : string
 Example
 -------
     import pysat
+    import datetime as dt
     dmsp = pysat.Instrument('isr', 'pf', 'lp', clean_level='clean')
-    dmsp.download(pysat.datetime(2010, 2, 19), pysat.datetime(2010, 2, 24))
+    dmsp.download(dt.datetime(2010, 2, 19), dt.datetime(2010, 2, 24))
     dmsp.load(2010,52)
 
 Note
@@ -31,6 +32,7 @@ Note
 
 from __future__ import print_function
 from __future__ import absolute_import
+import datetime as dt
 import functools
 import logging
 import numpy as np
@@ -46,8 +48,8 @@ name = 'pf'
 tags = {'lp': 'Long Pulse', 'ac': 'Alternating Code',
         'vvelsLat': 'Vector velocities'}
 sat_ids = {'': list(tags.keys())}
-test_dates = {'': {'lp': pysat.datetime(2014, 2, 19),
-                   'ac': pysat.datetime(2014, 2, 19)}}
+test_dates = {'': {'lp': dt.datetime(2014, 2, 19),
+                   'ac': dt.datetime(2014, 2, 19)}}
 
 # support list files routine
 # use the default CDAWeb method
