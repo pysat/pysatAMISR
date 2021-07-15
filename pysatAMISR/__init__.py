@@ -1,24 +1,14 @@
 # -*- coding: utf-8 -*-.
 """Module for loading AMISR data into pysat
-
-Author
-------
-Angeline G. Burrell, NRL, September 2019
-
-Modules
--------
-methods
-isr_pf
-isr_risrn
-
 """
+import os as _os
 
-from __future__ import absolute_import
+from pysatAMISR import instruments, utils  # noqua F401
 
-from . import methods
-from . import utils
-from . import isr_pf
+# Set the package version
+with open(_os.path.join(_os.path.abspath(_os.path.dirname(__file__)),
+                        "version.txt"), "r") as fin:
+    __version__ = fin.read().strip()
 
-__version__ = '1.0.0'
-
-
+# Clean up
+del fin
