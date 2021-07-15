@@ -3,20 +3,19 @@
 
 """
 
-from __future__ import absolute_import
-
 import numpy as np
+import warnings
 import xarray as xr
 
 import pysat
 import visuamisr as visr
 
 def amisr_rules():
-    """ General acknoledgement statement for AMISR data
+    """ General acknowledgement statement for AMISR data
 
     Returns
     -------
-    ackn : string
+    ackn : str
         String with general acknowledgement for all AMISR data
 
     """
@@ -27,7 +26,7 @@ def amisr_rules():
 
     return ackn
 
-def load(fnames, tag=None, sat_id=None,
+def load(fnames, tag=None, inst_id=None,
          xarray_coords=['ave_times', 'beamcodes', 'range_gate', 'uncor_gate'],
          xarray_attrs=['site_latitude', 'site_longitude', 'site_altitude',
                        'site_name', 'site_code']):
@@ -38,14 +37,13 @@ def load(fnames, tag=None, sat_id=None,
     fnames : array-like
         iterable of filename strings, full path, to data files to be loaded.
         This input is nominally provided by pysat itself.
-    tag : string ('')
+    tag : str or NoneType
         tag name used to identify particular data set to be loaded.
-        This input is nominally provided by pysat itself. While
-        tag defaults to None here, pysat provides '' as the default
+        This input is nominally provided by pysat itself. (default=None)
         tag unless specified by user at Instrument instantiation.
-    sat_id : string ('')
-        Satellite ID used to identify particular data set to be loaded.
-        This input is nominally provided by pysat itself.
+    inst_id : str or NoneType
+        Instrument ID used to identify particular data set to be loaded.
+        (default=None)
     xarray_coords : list
         List of keywords to use as coordinates, with time as the first
         key in the list (default=['ave_times', 'beamcodes', 'range_gate',
@@ -122,25 +120,26 @@ def load(fnames, tag=None, sat_id=None,
 
     # Assign the meta data
     meta = pysat.Meta()
-    meta.info = {'acknowledgements': amisr_rules()}
     for dkey in data_vars.keys():
-        meta[dkey] = get_metadata(dkey)
+        meta[dkey] = get_metadata(dkey, meta.labels)
 
     for dkey in xarray_coords:
-        meta[dkey] = get_metadata(dkey)
+        meta[dkey] = get_metadata(dkey, meta.labels)
 
     for dkey in xarray_attrs:
-        meta[dkey] = get_metadata(dkey)
+        meta[dkey] = get_metadata(dkey, meta.labels)
 
     return xdata, meta
 
-def get_metadata(data_key):
+def get_metadata(data_key, mlabels):
     """ Get metadata for a specified data key
 
     Parameters
     ----------
-    data_key : string
+    data_key : str
         Data key corresponding to known meta data information
+    mlabels : pysat.MetaLabels
+        MetaLabels class object with Instrument meta data labels
 
     Returns
     -------
@@ -194,29 +193,20 @@ def get_metadata(data_key):
              "site_name": "", "site_code": "", "ave_time": "", "beamcodes": "",
              "range_gate": "", "uncor_gate": ""}
 
-    scale = {"az": "linear", "el": "linear", "density": "log",
-             "edensity": "log", "Te": "linear", "Ti": "linear", "vel": "linear",
-             "eTe": "linear",  "eTi": "linear", "evel": "linear",
-             "range": "linear", "altitude": "linear",  "density_uncor": "log",
-             "edensity_uncor": "log", "altitude_uncor": "linear",
-             "latitude": "linear", "longitude": "linear", "babs": "linear",
-             "times_0": "linear", "times_1": "linear", "kvec_0": "linear",
-             "kvec_1": "linear", "kvec_2": "linear", "site_latitude": "linear",
-             "site_longitude": "linear", "site_altitude": "linear",
-             "site_name": "", "site_code": "", "ave_time": "linear",
-             "beamcodes": "linear", "range_gate": "linear",
-             "uncor_gate": "linear"}
-
-    # Set the default output
-    meta_dict = {'units': '', 'long_name': '', 'desc': '', 'label': '',
-                 'scale': 'linear', 'notes': '', 'value_min': np.nan,
-                 'value_max': np.nan, 'fill': np.nan}
+    # TODO HERE: fill these in based on data
+    min_val = {data_key: np.nan}
+    max_val = {data_key: np.nan}
+    fill_val = {data_key: np.nan}
 
     # Assign the particular data
     if data_key in units.keys():
-        meta_dict = {'units': units[data_key], 'long_name': long_name[data_key],
-                     'desc': long_name[data_key], 'label': long_name[data_key],
-                     'scale': scale[data_key]}
+        meta_dict = {mlabels.units: units[data_key],
+                     mlabels.name: long_name[data_key],
+                     mlabels.desc: long_name[data_key],
+                     mlabels.notes: '',
+                     mlabels.min_val: min_val[data_key],
+                     mlabels.max_val: max_val[data_key],
+                     mlabels.fill_val: fill_val[data_key]}
 
     return meta_dict
 
@@ -226,8 +216,7 @@ def list_remote_files():
 
     return list()
 
-def download(date_array, tag='', sat_id='', data_path=None, user=None,
-             password=None):
+def download(date_array, tag='', inst_id='', data_path=None):
     """ Downloads data from the AMISR data base
 
     Parameters
@@ -235,34 +224,30 @@ def download(date_array, tag='', sat_id='', data_path=None, user=None,
     date_array : array-like
         list of datetimes to download data for. The sequence of dates need not
         be contiguous.
-    tag : string ('')
+    tag : str
         Tag identifier used for particular dataset. This input is provided by
-        pysat.
-    sat_id : string  ('')
-        Satellite ID string identifier used for particular dataset. This input
-        is provided by pysat.
-    data_path : string (None)
-        Path to directory to download data to.
-    user : string (None)
-        User string input used for download. Provided by user and passed via
-        pysat. If an account
-        is required for dowloads this routine here must error if user not
-        supplied.
-    password : string (None)
-        Password for data download.
+        pysat. (default='')
+    inst_id : str
+        Satellite ID str identifier used for particular dataset. This input
+        is provided by pysat. (default='')
+    data_path : str
+        Path to directory to download data to. (default=None)
 
-    Notes
-    -----
-    The user's names should be provided in field user. Ruby Payne-Scott should
-    be entered as Ruby+Payne-Scott
-
-    The password field should be the user's email address. These parameters
-    are passed to AMISR when downloading.
-
-    The affiliation field is set to pysat to enable tracking of pysat
-    downloads.
+    Warnings
+    --------
+    Scripted downloads not currently supported by SRI
 
     """
 
+    # Link address:
+    # https://data.amisr.com/database/dbase_site_media/PFISR/Experiments/20190202.004/DataFiles/20190202.004_ac_1min-fitcal.h5
+    # https://data.amisr.com/database/dbase_site_media/PFISR/Experiments/20190202.002/DataFiles/20190202.002_lp_5min-fitcal.h5
+
+    remoteaccess = {'method': 'http', 'host': 'data.amisr.com',
+                    'path': 'database/dbase_site_media',}
+
+    warnings.warn('script downloads are currently not supported by SRI')
+
     return
+
 
